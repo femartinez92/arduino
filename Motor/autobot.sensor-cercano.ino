@@ -11,6 +11,11 @@
 #define in4 6
 #define enB 5
 
+int speed = 170;
+int rotateSpeed = 170;
+int searchDelay = 3;
+int advanceDelay = 1;
+int searchAngle = 100;
 class Motor{
 
     int enablePin;
@@ -26,17 +31,17 @@ class Motor{
     };     
     
     //Method to drive the motor 0~255 driving forward. -1~-255 driving backward
-    Drive(int speed){
-    if(speed>=0){
-        digitalWrite(directionPin1, LOW);
-        digitalWrite(directionPin2, HIGH);
-      }
-    else{
-        digitalWrite(directionPin1, HIGH);
-        digitalWrite(directionPin2, LOW);
-        speed = - speed;
-      } 
-    analogWrite(enablePin, speed);  
+    void Drive(int speed){
+      if(speed>=0){
+          digitalWrite(directionPin1, LOW);
+          digitalWrite(directionPin2, HIGH);
+        }
+      else{
+          digitalWrite(directionPin1, HIGH);
+          digitalWrite(directionPin2, LOW);
+          speed = - speed;
+        } 
+      analogWrite(enablePin, speed);  
     }
   };
 
@@ -45,6 +50,7 @@ Motor rightMotor = Motor(enB, in3, in4);
 #define LineFollowerSensor 3 // Declaration of the sensor input pin
   
 void setup() {
+  Serial.begin(9600);
   pinMode(enA, OUTPUT);
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
@@ -64,24 +70,25 @@ void setup() {
 
 
 void loop() {
-
+  Serial.print("loop");
   bool val = digitalRead (LineFollowerSensor) ;
+  Serial.println(val);
   bool course_corrected = true;
   // El valor es HIGH cuando se sale de la linea (Cuando sale de la linea se prende el LED)
-  if(val == HIGH) {
-    course_corrected = correct_course(val == HIGH, leftMotor, rightMotor);
+  if(!val) {
+    course_corrected = correct_course(val, leftMotor, rightMotor);
   }
   // move straight
   if(course_corrected) {
-    leftMotor.Drive(70);
-    rightMotor.Drive(70);
+    leftMotor.Drive(speed);
+    rightMotor.Drive(speed);
   } else {
     leftMotor.Drive(0);
     leftMotor.Drive(0);
   }
   
 
-  delay(200);
+  delay(advanceDelay);
 
 
 }
@@ -89,12 +96,12 @@ void loop() {
 bool correct_course(bool onLine, Motor leftMotor, Motor rightMotor) {
 
       leftMotor.Drive(0);
-      bool findLeft = searchLeft(90, rightMotor);
+      bool findLeft = searchLeft(searchAngle, rightMotor);
       if (findLeft) {
         return true;
       }
       rightMotor.Drive(0);
-      bool findRight = searchRight(90, leftMotor);
+      bool findRight = searchRight(searchAngle, leftMotor);
       if (findRight) {
         return true;
       }
@@ -102,40 +109,44 @@ bool correct_course(bool onLine, Motor leftMotor, Motor rightMotor) {
 }
 
 bool searchLeft(int angle, Motor rightMotor) {
-  bool valLeft = digitalRead (LineFollowerSensor) ;
+  bool isInline = digitalRead (LineFollowerSensor);
   int i = 0;
-  rightMotor.Drive(70);
+  rightMotor.Drive(rotateSpeed);
+  Serial.println("Search Left");
   while(i < angle) {
-    delay(100);
-    valLeft = digitalRead(LineFollowerSensor);
-    if (valLeft != HIGH) {
+    delay(searchDelay);
+    isInline = digitalRead(LineFollowerSensor);
+    if (isInline) {
       return true;
     }
     i = i + 1;
   }
-  rightMotor.Drive(-70);
+  rightMotor.Drive(-1*rotateSpeed);
+  Serial.println("Reverse Search Left");
   while(i > 0) {
-    delay(100);
+    delay(searchDelay);
     i = i - 1;
   }
   return false;
 }
 
 bool searchRight(int angle, Motor leftMotor) {
-  bool valRight = digitalRead (LineFollowerSensor) ;
+  bool isInline = digitalRead (LineFollowerSensor) ;
   int i = 0;
-  leftMotor.Drive(70);
+  leftMotor.Drive(rotateSpeed);
+  Serial.println("Search Right");
   while(i < angle) {
-    delay(100);
-    valRight = digitalRead(LineFollowerSensor);
-    if (valRight != HIGH) {
+    delay(searchDelay);
+    isInline = digitalRead(LineFollowerSensor);
+    if (isInline) {
       return true;
     }
     i = i + 1;
   }
-  leftMotor.Drive(-70);
+  Serial.println("Reverse Search Right");
+  leftMotor.Drive(-1*rotateSpeed);
   while(i > 0) {
-    delay(100);
+    delay(searchDelay);
     i = i - 1;
   }
   return false;
